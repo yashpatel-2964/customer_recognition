@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Runtime data
+auto_captured/*
+static/images/*
+*.jpg
+*.jpeg
+*.png
+!static/images/default_user.png
+
+# Local development
+.env.local
+.env.development
+.env
+
+# Editor directories and files
+.idea
+.vscode
+*.swp
+*.swo
+
+# MongoDB data
+data/db/
+
+# Face data (may contain sensitive information)
+face_data/*
+
+# Models (can be regenerated)
+models/*
+
+# Other
+*.log 

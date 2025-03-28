@@ -1,0 +1,441 @@
+{
+    "C100001": {
+        "customer_id": "C100001",
+        "first_seen": "2024-03-28",
+        "visit_count": 14,
+        "avg_bill": 199.04871963001952,
+        "purchases": [
+            {
+                "date": "2024-03-28",
+                "amount": 149.05,
+                "items_count": 6
+            },
+            {
+                "date": "2024-04-08",
+                "amount": 87.46,
+                "items_count": 15
+            },
+            {
+                "date": "2024-04-21",
+                "amount": 126.94,
+                "items_count": 18
+            },
+            {
+                "date": "2024-05-12",
+                "amount": 164.09,
+                "items_count": 5
+            },
+            {
+                "date": "2024-05-15",
+                "amount": 107.84,
+                "items_count": 11
+            },
+            {
+                "date": "2024-06-06",
+                "amount": 107.02,
+                "items_count": 20
+            },
+            {
+                "date": "2024-07-20",
+                "amount": 154.91,
+                "items_count": 2
+            },
+            {
+                "date": "2024-06-27",
+                "amount": 155.67,
+                "items_count": 1
+            },
+            {
+                "date": "2024-08-19",
+                "amount": 150.11,
+                "items_count": 13
+            },
+            {
+                "date": "2024-07-23",
+                "amount": 99.13,
+                "items_count": 11
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 100.2,
+                "items_count": 3
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 1000.45,
+                "items_count": 6
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 230.0,
+                "items_count": 3
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 153.81207482027264,
+                "items_count": 4
+            }
+        ],
+        "features": {
+            "avg_bill": 130.22,
+            "max_bill": 164.09,
+            "min_bill": 87.46,
+            "avg_items": 10.2,
+            "frequency_days": 14
+        }
+    },
+    "C100002": {
+        "customer_id": "C100002",
+        "first_seen": "2024-03-28",
+        "visit_count": 23,
+        "avg_bill": 154.2797415966569,
+        "purchases": [
+            {
+                "date": "2024-03-28",
+                "amount": 167.3,
+                "items_count": 15
+            },
+            {
+                "date": "2024-04-17",
+                "amount": 212.43,
+                "items_count": 15
+            },
+            {
+                "date": "2024-04-25",
+                "amount": 178.83,
+                "items_count": 16
+            },
+            {
+                "date": "2024-05-21",
+                "amount": 137.19,
+                "items_count": 20
+            },
+            {
+                "date": "2024-05-19",
+                "amount": 218.49,
+                "items_count": 15
+            },
+            {
+                "date": "2024-06-26",
+                "amount": 145.99,
+                "items_count": 16
+            },
+            {
+                "date": "2024-06-20",
+                "amount": 170.12,
+                "items_count": 3
+            },
+            {
+                "date": "2024-08-08",
+                "amount": 217.66,
+                "items_count": 7
+            },
+            {
+                "date": "2024-09-12",
+                "amount": 180.74,
+                "items_count": 13
+            },
+            {
+                "date": "2024-09-24",
+                "amount": 214.48,
+                "items_count": 3
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 151.91247209371758,
+                "items_count": 20
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 140.09169943062176,
+                "items_count": 15
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 140.09169943062176,
+                "items_count": 13
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 138.0571869609914,
+                "items_count": 19
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 137.65807511310928,
+                "items_count": 15
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 122.0,
+                "items_count": 13
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 137.58794712471214,
+                "items_count": 5
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 157.0,
+                "items_count": 17
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 87.0,
+                "items_count": 8
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 127.92012434471025,
+                "items_count": 5
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 112.0,
+                "items_count": 10
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 131.88485222462484,
+                "items_count": 16
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 122.0,
+                "items_count": 5
+            }
+        ],
+        "features": {
+            "avg_bill": 184.32,
+            "max_bill": 218.49,
+            "min_bill": 137.19,
+            "avg_items": 12.3,
+            "frequency_days": 16
+        }
+    },
+    "C1743108464": {
+        "customer_id": "C1743108464",
+        "first_seen": "2024-03-28",
+        "visit_count": 12,
+        "avg_bill": 66.52916666666667,
+        "purchases": [
+            {
+                "date": "2024-03-28",
+                "amount": 54.61,
+                "items_count": 18
+            },
+            {
+                "date": "2024-04-25",
+                "amount": 40.05,
+                "items_count": 4
+            },
+            {
+                "date": "2024-05-11",
+                "amount": 75.02,
+                "items_count": 2
+            },
+            {
+                "date": "2024-06-05",
+                "amount": 56.26,
+                "items_count": 10
+            },
+            {
+                "date": "2024-07-18",
+                "amount": 59.2,
+                "items_count": 9
+            },
+            {
+                "date": "2024-08-30",
+                "amount": 60.44,
+                "items_count": 8
+            },
+            {
+                "date": "2024-08-19",
+                "amount": 63.04,
+                "items_count": 4
+            },
+            {
+                "date": "2024-10-24",
+                "amount": 41.5,
+                "items_count": 8
+            },
+            {
+                "date": "2024-09-20",
+                "amount": 85.88,
+                "items_count": 18
+            },
+            {
+                "date": "2025-01-01",
+                "amount": 51.35,
+                "items_count": 20
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 90.0,
+                "items_count": 16
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 121.0,
+                "items_count": 11
+            }
+        ],
+        "features": {
+            "avg_bill": 58.73,
+            "max_bill": 85.88,
+            "min_bill": 40.05,
+            "avg_items": 10.1,
+            "frequency_days": 27
+        }
+    },
+    "C1743108678": {
+        "customer_id": "C1743108678",
+        "first_seen": "2024-03-28",
+        "visit_count": 12,
+        "avg_bill": 88.30933421216359,
+        "purchases": [
+            {
+                "date": "2024-03-28",
+                "amount": 67.65,
+                "items_count": 16
+            },
+            {
+                "date": "2024-04-10",
+                "amount": 92.05,
+                "items_count": 3
+            },
+            {
+                "date": "2024-04-21",
+                "amount": 85.13,
+                "items_count": 13
+            },
+            {
+                "date": "2024-04-27",
+                "amount": 81.31,
+                "items_count": 5
+            },
+            {
+                "date": "2024-05-27",
+                "amount": 49.5,
+                "items_count": 5
+            },
+            {
+                "date": "2024-05-22",
+                "amount": 79.85,
+                "items_count": 2
+            },
+            {
+                "date": "2024-06-20",
+                "amount": 100.11,
+                "items_count": 8
+            },
+            {
+                "date": "2024-06-06",
+                "amount": 62.36,
+                "items_count": 11
+            },
+            {
+                "date": "2024-07-18",
+                "amount": 78.48,
+                "items_count": 20
+            },
+            {
+                "date": "2024-07-05",
+                "amount": 96.8,
+                "items_count": 3
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 131.41742362566438,
+                "items_count": 2
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 135.05458692029862,
+                "items_count": 1
+            }
+        ],
+        "features": {
+            "avg_bill": 79.32,
+            "max_bill": 100.11,
+            "min_bill": 49.5,
+            "avg_items": 8.6,
+            "frequency_days": 13
+        }
+    },
+    "C1743152284": {
+        "customer_id": "C1743152284",
+        "first_seen": "2025-03-28",
+        "visit_count": 6,
+        "purchases": [
+            {
+                "date": "2025-03-28",
+                "amount": 80.5,
+                "items_count": 11
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 128.5786295227644,
+                "items_count": 12
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 136.95196264943533,
+                "items_count": 9
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 137.46306191193477,
+                "items_count": 15
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 135.0,
+                "items_count": 11
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 137.5952884734867,
+                "items_count": 14
+            }
+        ],
+        "avg_bill": 126.01482375960353
+    },
+    "C1743154825": {
+        "customer_id": "C1743154825",
+        "first_seen": "2025-03-28",
+        "visit_count": 3,
+        "purchases": [
+            {
+                "date": "2025-03-28",
+                "amount": 100.0,
+                "items_count": 12
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 89.0,
+                "items_count": 13
+            },
+            {
+                "date": "2025-03-28",
+                "amount": 127.52805175792324,
+                "items_count": 3
+            }
+        ],
+        "avg_bill": 105.5093505859744
+    },
+    "C1001": {
+        "customer_id": "C1001",
+        "first_seen": "2025-03-28",
+        "visit_count": 1,
+        "purchases": [
+            {
+                "date": "2025-03-28",
+                "amount": 100.0,
+                "items_count": 11
+            }
+        ],
+        "avg_bill": 100.0
+    }
+}

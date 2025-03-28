@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Purchase History</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/">Customer Recognition System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/history">Customer History</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        Customer Purchase History
+                    </div>
+                    <div class="card-body">
+                        <form action="/history" method="GET" class="row g-3 mb-4">
+                            <div class="col-md-8">
+                                <select name="customer_id" class="form-select" required>
+                                    <option value="" selected disabled>Select Customer</option>
+                                    {% for id in customer_ids %}
+                                        <option value="{{ id }}" {% if selected_customer == id %}selected{% endif %}>
+                                            {{ id }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary w-100">View History</button>
+                            </div>
+                        </form>
+
+                        {% if selected_customer and purchase_history %}
+                            <h4>Customer: {{ selected_customer }}</h4>
+                            <div style="height: 300px;">
+                                <canvas id="purchaseHistoryChart"></canvas>
+                            </div>
+                            <script id="chart-data" type="application/json">
+                                {{ chart_data|tojson }}
+                            </script>
+
+                            <h5 class="mt-4">Purchase Details</h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Amount</th>
+                                            <th>Items</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for purchase in purchase_history %}
+                                            <tr>
+                                                <td>{{ purchase.date }}</td>
+                                                <td>${{ "%.2f"|format(purchase.amount) }}</td>
+                                                <td>{{ purchase.items_count }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="card summary-card">
+                                            <h5>Average Purchase</h5>
+                                            <div class="prediction-amount">${{ "%.2f"|format(stats.avg_bill) }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card summary-card">
+                                            <h5>Total Visits</h5>
+                                            <div class="prediction-amount">{{ stats.visit_count }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card summary-card">
+                                            <h5>Next Predicted Bill</h5>
+                                            <div class="prediction-amount">${{ "%.2f"|format(stats.next_prediction) }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% elif selected_customer %}
+                            <div class="alert alert-info">
+                                No purchase history found for customer {{ selected_customer }}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                Select a customer to view their purchase history
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

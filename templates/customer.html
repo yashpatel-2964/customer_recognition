@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Details | {{ customer.customer_id }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/">Customer Recognition System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/history">Customer History</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Customer {{ customer.customer_id }}</li>
+                    </ol>
+                </nav>
+                
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <div>Customer Details</div>
+                        <div>ID: {{ customer.customer_id }}</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Customer Info Section -->
+                            <div class="col-md-12">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h5 class="card-title">Visit Information</h5>
+                                                <p><strong>First Seen:</strong> {{ customer.registration_date }}</p>
+                                                <p><strong>Total Visits:</strong> {{ customer.visit_count }}</p>
+                                                <p><strong>Last Visit:</strong> {{ customer.last_seen_date }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h5 class="card-title">Billing Prediction</h5>
+                                                <div class="prediction-amount">${{ "%.2f"|format(predicted_bill) }}</div>
+                                                <p class="text-muted">Based on purchase history</p>
+                                                
+                                                <button class="btn btn-sm btn-primary mt-2" onclick="toggleEditForm()">
+                                                    Record Actual Bill
+                                                </button>
+                                                
+                                                <div id="edit-form" class="edit-form mt-3">
+                                                    <form id="update-bill-form" class="row g-3">
+                                                        <input type="hidden" name="customer_id" value="{{ customer.customer_id }}">
+                                                        <div class="col-md-7">
+                                                            <input type="number" step="0.01" name="actual_bill" 
+                                                                class="form-control" placeholder="Actual amount" required>
+                                                        </div>
+                                                        <div class="col-md-5">
+                                                            <button type="submit" class="btn btn-success btn-sm w-100">Save</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Purchase History Section -->
+                                <div class="card mt-3">
+                                    <div class="card-header">Purchase History</div>
+                                    <div class="card-body">
+                                        {% if purchases %}
+                                            <div class="table-responsive">
+                                                <table class="table table-hover">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Date</th>
+                                                            <th>Amount</th>
+                                                            <th>Items</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for purchase in purchases %}
+                                                            <tr>
+                                                                <td>{{ purchase.date }}</td>
+                                                                <td>${{ "%.2f"|format(purchase.amount) }}</td>
+                                                                <td>{% if purchase.items_count %}{{ purchase.items_count }}{% else %}N/A{% endif %}</td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        {% else %}
+                                            <p class="text-center text-muted">No purchase history found</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script>
+        function toggleEditForm() {
+            const form = document.getElementById('edit-form');
+            if (form.style.display === 'block') {
+                form.style.display = 'none';
+            } else {
+                form.style.display = 'block';
+            }
+        }
+        
+        // Handle form submission via AJAX
+        document.getElementById('update-bill-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const data = {
+                customer_id: formData.get('customer_id'),
+                actual_bill: parseFloat(formData.get('actual_bill'))
+            };
+            
+            fetch('/api/update_bill', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Bill updated successfully!');
+                location.reload();
+            })
+            .catch((error) => {
+                alert('Error updating bill: ' + error);
+            });
+        });
+    </script>
+</body>
+</html>
