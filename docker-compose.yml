@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./auto_captured:/app/auto_captured
+      - ./static/images:/app/static/images
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/face_recognition_db
+      - SECRET_KEY=${SECRET_KEY:-DefaultSecretKeyChangeThis}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-DefaultJWTSecretKeyChangeThis}
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:5.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo_data: 

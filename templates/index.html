@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartShop | Customer Recognition</title>
+    <!-- Combined external resources with crossorigin for better security -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1">
+
+</head>
+<body>
+    <!-- Notification Element -->
+    <div id="notification" class="notification">
+        <div class="notification-icon"><i class="fas fa-user-check"></i></div>
+        <div class="notification-content"><span id="notification-message">Customer detected!</span></div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo"><i class="fas fa-store"></i><span>SmartShop</span></div>
+        </div>
+        <div class="sidebar-menu">
+            <ul>
+                <li class="active"><a href="/"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+                <li><a href="/history"><i class="fas fa-history"></i><span>Customer History</span></a></li>
+                <li><a href="#" class="disabled"><i class="fas fa-chart-line"></i><span>Analytics</span></a></li>
+                <li><a href="#" class="disabled"><i class="fas fa-cog"></i><span>Settings</span></a></li>
+            </ul>
+        </div>
+        <div class="sidebar-footer">
+            <div class="employee-info">
+                <i class="fas fa-id-badge"></i>
+                <span id="employee-id">{{ current_user }}</span>
+            </div>
+            <div id="detection-status" class="status-indicator status-inactive">
+                <div id="detection-pulse"></div><span>Detection System</span>
+            </div>
+            <div class="logout-container">
+                <a href="{{ url_for('auth.logout') }}" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <header>
+            <div class="header-content">
+                <button id="sidebar-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
+                <div class="page-title">Customer Recognition Dashboard</div>
+                <div class="header-right">
+                    <div class="refresh-indicator">
+                        <button id="toggleAutoRefresh" class="btn-refresh">
+                            <i class="fas fa-sync-alt"></i><span>Auto</span>
+                        </button>
+                        <span id="refresh-status">Checking for new customers... <span id="countdown">5</span>s</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <div class="content-wrapper">
+            <div class="container-fluid">
+                <!-- Latest Customer -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div id="main-customer-card" class="card customer-card">
+                            <div class="card-header">
+                                <div class="card-header-title"><i class="fas fa-user-check"></i> Latest Customer</div>
+                                <div class="card-tools">
+                                    <button id="debug-btn" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-bug"></i> Debug
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="main-customer-display" class="card-body" data-customer-id="{{ latest_customer.customer_id if latest_customer else '' }}">
+                                {% if latest_customer %}
+                                <div class="customer-profile">
+                                    <div class="customer-image-container">
+                                        <img src="{{ latest_customer.image_url }}" alt="Customer" class="customer-image" id="customer-image">
+                                        <div class="customer-badge"><i class="fas fa-crown"></i> Customer</div>
+                                    </div>
+                                    <div class="customer-details">
+                                        <div class="customer-info">
+                                            <h3 id="customer-id">{{ latest_customer.customer_id }}</h3>
+                                            <div class="customer-meta">
+                                                <div class="meta-item">
+                                                    <i class="fas fa-calendar-check"></i>
+                                                    <span id="visit-count">Visit #{{ latest_customer.visit_count }}</span>
+                                                </div>
+                                                <div class="meta-item detection-time" id="detection-time">
+                                                    <i class="fas fa-clock"></i>
+                                                    <span>{{ latest_customer.detection_time }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="prediction-card">
+                                            <div class="prediction-header">
+                                                <h4>Predicted Purchase</h4>
+                                                <div class="prediction-accuracy">
+                                                    <span class="accuracy-badge high">High Confidence</span>
+                                                </div>
+                                            </div>
+                                            <div class="prediction-amount" id="prediction-display">${{ "%.2f"|format(latest_customer.predicted_bill) }}</div>
+                                            <p class="prediction-note">Based on previous purchase history</p>
+                                            
+                                            <div class="btn-action-group">
+                                                <button class="btn btn-confirm-prediction" 
+                                                        onclick="confirmPrediction('{{ latest_customer.customer_id }}', {{ latest_customer.predicted_bill }})">
+                                                    <i class="fas fa-check"></i> Confirm Prediction
+                                                </button>
+                                                <button class="btn btn-edit" onclick="toggleEditForm('edit-form')">
+                                                    <i class="fas fa-edit"></i> Edit Amount
+                                                </button>
+                                            </div>
+                                            
+                                            <div id="edit-form" class="edit-form">
+                                                <form id="latest-update-form" class="form-inline">
+                                                    <input type="hidden" id="latest-customer-id" name="customer_id" value="{{ latest_customer.customer_id }}">
+                                                    <div class="form-group">
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" step="0.01" id="manual-actual-bill" name="actual_bill" class="form-control" placeholder="Enter amount" value="" required>
+                                                        </div>
+                                                    </div>
+                                                    <button type="submit" class="btn btn-save">
+                                                        <i class="fas fa-save"></i> Save
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="empty-state">
+                                    <div class="empty-icon"><i class="fas fa-user-clock"></i></div>
+                                    <h4>No customers detected yet</h4>
+                                    <p>Waiting for customers to enter the store...</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Debug Panel -->
+                            <div id="debug-panel" class="card-footer p-2" style="display: none;">
+                                <div class="debug-header bg-light p-2 mb-2">
+                                    <h6 class="m-0">Debug Information</h6>
+                                </div>
+                                <div class="debug-content">
+                                    <div class="debug-status">
+                                        <p><strong>Last API Call:</strong> <span id="debug-api-time">Never</span></p>
+                                        <p><strong>API Status:</strong> <span id="debug-api-status">Unknown</span></p>
+                                    </div>
+                                    <div class="debug-actions mt-2">
+                                        <button id="manual-check-btn" class="btn btn-sm btn-primary">Force API Check</button>
+                                        <button id="test-detection-btn" class="btn btn-sm btn-success">Test Detection</button>
+                                    </div>
+                                    <div class="debug-log mt-2">
+                                        <small>Log:</small>
+                                        <pre id="debug-log" class="bg-dark text-light p-2" style="max-height: 100px; overflow-y: auto;">No log entries</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Customer History & Search -->
+                <div class="row">
+                    <div class="col-md-7">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-header-title"><i class="fas fa-users"></i> Recent Customers</div>
+                                <div class="card-tools"><span class="badge bg-primary">Today</span></div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="customer-table-wrapper">
+                                    <table class="customer-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Customer ID</th>
+                                                <th>Time</th>
+                                                <th>Amount</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="customer-history-tbody">
+                                            {% if recent_customers %}
+                                                {% for customer in recent_customers %}
+                                                <tr data-customer-id="{{ customer.customer_id }}">
+                                                    <td>
+                                                        <div class="customer-cell">
+                                                            <div class="customer-id">{{ customer.customer_id }}</div>
+                                                        </div>
+                                                    </td>
+                                                    <td>{{ customer.detection_time }}</td>
+                                                    <td><div class="amount">${{ "%.2f"|format(customer.predicted_bill) }}</div></td>
+                                                    <td>
+                                                        <div class="actions">
+                                                            <button class="btn-icon" onclick="confirmPrediction('{{ customer.customer_id }}', {{ customer.predicted_bill }})">
+                                                                <i class="fas fa-check"></i>
+                                                            </button>
+                                                            <button class="btn-icon" onclick="window.location.href='/customer/{{ customer.customer_id }}'">
+                                                                <i class="fas fa-eye"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            {% else %}
+                                                <tr id="no-history-row">
+                                                    <td colspan="4" class="text-center">
+                                                        <div class="empty-table-message">No recent customers detected</div>
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-header-title"><i class="fas fa-search"></i> Customer Search</div>
+                            </div>
+                            <div class="card-body">
+                                <form action="/manual_lookup" method="POST" class="search-form">
+                                    <div class="search-input-group">
+                                        <input type="text" class="form-control" name="customer_id" placeholder="Enter Customer ID" required>
+                                        <button type="submit" class="btn btn-search">
+                                            <i class="fas fa-search"></i> Search
+                                        </button>
+                                    </div>
+                                </form>
+                                
+                                {% if manual_lookup_result %}
+                                <div class="lookup-result">
+                                    <div class="lookup-header">
+                                        <div class="lookup-image">
+                                            {% if manual_lookup_result.image_url %}
+                                                <img src="{{ manual_lookup_result.image_url }}" alt="Customer Image">
+                                            {% else %}
+                                                <div class="no-image"><i class="fas fa-user"></i></div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="lookup-details">
+                                            <h5>{{ manual_lookup_result.customer_id }}</h5>
+                                            <div class="lookup-meta">
+                                                <span class="visits">Visit #{{ manual_lookup_result.visit_count }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="prediction-summary">
+                                        <div class="prediction-item">
+                                            <div class="prediction-label">Predicted</div>
+                                            <div class="prediction-value">${{ "%.2f"|format(manual_lookup_result.predicted_bill) }}</div>
+                                        </div>
+                                        <div class="prediction-item">
+                                            <div class="prediction-label">Actual</div>
+                                            <div class="prediction-value" id="actual-bill-display">
+                                                {% if manual_lookup_result.actual_bill %}
+                                                    ${{ "%.2f"|format(manual_lookup_result.actual_bill) }}
+                                                {% else %}
+                                                    <span class="not-set">Not set</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="btn-action-group">
+                                        <button class="btn btn-confirm-prediction" 
+                                                onclick="confirmPrediction('{{ manual_lookup_result.customer_id }}', {{ manual_lookup_result.predicted_bill }})">
+                                            <i class="fas fa-check"></i> Confirm Prediction
+                                        </button>
+                                        <button class="btn btn-edit" onclick="toggleEditForm('manual-edit-form')">
+                                            {% if manual_lookup_result.actual_bill %}Edit{% else %}Set{% endif %} Amount
+                                        </button>
+                                    </div>
+                                    
+                                    <div id="manual-edit-form" class="edit-form">
+                                        <form id="manual-update-form" class="form-inline">
+                                            <input type="hidden" name="customer_id" value="{{ manual_lookup_result.customer_id }}">
+                                            <div class="form-group">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">$</span>
+                                                    <input type="number" step="0.01" id="manual-actual-bill" name="actual_bill" 
+                                                        class="form-control" placeholder="Enter amount" 
+                                                        value="{% if manual_lookup_result.actual_bill %}{{ manual_lookup_result.actual_bill }}{% endif %}" required>
+                                                </div>
+                                            </div>
+                                            <button type="submit" class="btn btn-save"><i class="fas fa-save"></i> Save</button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <div class="card-header-title"><i class="fas fa-chart-bar"></i> Today's Stats</div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="stats-grid">
+                                    <div class="stat-item">
+                                        <div class="stat-icon bg-primary"><i class="fas fa-user-friends"></i></div>
+                                        <div class="stat-details">
+                                            <div class="stat-title">Customers</div>
+                                            <div class="stat-value" id="total-customers">{{ recent_customers|length if recent_customers else 0 }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-icon bg-success"><i class="fas fa-dollar-sign"></i></div>
+                                        <div class="stat-details">
+                                            <div class="stat-title">Avg. Bill</div>
+                                            <div class="stat-value" id="avg-bill">${{ "%.2f"|format(60.75) }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-icon bg-warning"><i class="fas fa-clock"></i></div>
+                                        <div class="stat-details">
+                                            <div class="stat-title">Avg. Time</div>
+                                            <div class="stat-value" id="avg-time">15 min</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-icon bg-info"><i class="fas fa-chart-line"></i></div>
+                                        <div class="stat-details">
+                                            <div class="stat-title">Sales Trend</div>
+                                            <div class="stat-value" id="sales-trend"><i class="fas fa-arrow-up"></i> 12%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let autoRefreshEnabled = true;
+        let countdown = 5;
+        let lastTimestamp = "{{ latest_customer.timestamp if latest_customer else '' }}";
+        let detectionCheckCount = 0;
+        let knownCustomerIds = new Set({% if recent_customers %}[{% for customer in recent_customers %}"{{ customer.customer_id }}"{% if not loop.last %},{% endif %}{% endfor %}]{% else %}[]{% endif %});
+        const maxConsecutiveFailures = 10;
+        let debugLog = [];
+        let refreshIntervalId = null;
+        
+        // Core functionality
+        function addDebugLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
+            debugLog.unshift(logEntry);
+            if (debugLog.length > 20) debugLog.pop();
+            
+            const debugLogElement = document.getElementById('debug-log');
+            if (debugLogElement) debugLogElement.textContent = debugLog.join('\n');
+            console.log(`DEBUG: ${message}`);
+        }
+        
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            if (!notification) return;
+            
+            const messageElement = document.getElementById('notification-message');
+            if (messageElement) messageElement.textContent = message;
+            
+            notification.classList.add('show');
+            addDebugLog(`Notification shown: ${message}`, 'ui');
+            setTimeout(() => notification.classList.remove('show'), 5000);
+        }
+        
+        function toggleEditForm(formId) {
+            const form = document.getElementById(formId);
+            if (!form) return;
+            
+            form.style.display = form.style.display === 'block' ? 'none' : 'block';
+        }
+        
+        function confirmPrediction(customerId, predictedBill) {
+            if(!customerId) {
+                alert("No customer ID provided");
+                return;
+            }
+            
+            addDebugLog(`Confirming prediction for ${customerId}: $${predictedBill}`, 'action');
+            
+            fetch('/api/update_bill', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({customer_id: customerId, actual_bill: predictedBill}),
+                timeout: 10000 // 10 second timeout
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    showNotification(`Prediction confirmed: $${predictedBill.toFixed(2)}`);
+                    removeCustomerFromDisplay(customerId);
+                    addDebugLog(`Customer ${customerId} removed after confirming prediction`, 'success');
+                } else {
+                    alert('Error: ' + data.message);
+                    addDebugLog(`Error confirming prediction: ${data.message}`, 'error');
+                }
+            })
+            .catch((error) => {
+                alert('Error confirming prediction: ' + error);
+                addDebugLog(`Error confirming prediction: ${error}`, 'error');
+            });
+        }
+        
+        function updateCustomerDisplay(customer) {
+            const mainDisplay = document.getElementById('main-customer-display');
+            if (!mainDisplay) return;
+            
+            if (customer) {
+                addDebugLog(`Updating display for customer ${customer.customer_id}`, 'ui');
+                
+                // Create customer display HTML - template literal for better readability
+                const customerHTML = `
+                    <div class="customer-profile">
+                        <div class="customer-image-container">
+                            <img src="${customer.image_url || '/static/images/no_image.jpg'}" alt="Customer" class="customer-image" id="customer-image">
+                            <div class="customer-badge"><i class="fas fa-crown"></i> Customer</div>
+                        </div>
+                        <div class="customer-details">
+                            <div class="customer-info">
+                                <h3 id="customer-id">${customer.customer_id}</h3>
+                                <div class="customer-meta">
+                                    <div class="meta-item">
+                                        <i class="fas fa-calendar-check"></i>
+                                        <span id="visit-count">Visit #${customer.visit_count}</span>
+                                    </div>
+                                    <div class="meta-item detection-time" id="detection-time">
+                                        <i class="fas fa-clock"></i>
+                                        <span>${customer.detection_time}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="prediction-card">
+                                <div class="prediction-header">
+                                    <h4>Predicted Purchase</h4>
+                                    <div class="prediction-accuracy">
+                                        <span class="accuracy-badge high">High Confidence</span>
+                                    </div>
+                                </div>
+                                <div class="prediction-amount" id="prediction-display">
+    
+                                    $${customer.predicted_bill.toFixed(2)}
+                                </div>
+                                <p class="prediction-note">Based on previous purchase history</p>
+                                
+                                <div class="btn-action-group">
+                                    <button class="btn btn-confirm-prediction" 
+                                            onclick="confirmPrediction('${customer.customer_id}', ${customer.predicted_bill})">
+                                        <i class="fas fa-check"></i> Confirm Prediction
+                                    </button>
+                                    
+                                    <button class="btn btn-edit" onclick="toggleEditForm('edit-form')">
+                                        <i class="fas fa-edit"></i> Edit Amount
+                                    </button>
+                                </div>
+                                
+                                <div id="edit-form" class="edit-form">
+                                    <form id="latest-update-form" class="form-inline">
+                                        <input type="hidden" id="latest-customer-id" name="customer_id" value="${customer.customer_id}">
+                                        <div class="form-group">
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" step="0.01" name="actual_bill" 
+                                                    class="form-control" placeholder="Enter amount" required>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-save">
+                                            <i class="fas fa-save"></i> Save
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                mainDisplay.innerHTML = customerHTML;
+                mainDisplay.setAttribute('data-customer-id', customer.customer_id);
+                
+                const latestUpdateForm = document.getElementById('latest-update-form');
+                if (latestUpdateForm) {
+                    latestUpdateForm.addEventListener('submit', handleLatestUpdateFormSubmit);
+                }
+                
+                // Add customer to history if it's a new detection
+                if (!knownCustomerIds.has(customer.customer_id)) {
+                    addCustomerToHistory(customer);
+                    knownCustomerIds.add(customer.customer_id);
+                    
+                    // Update stats
+                    const totalCustomers = document.getElementById('total-customers');
+                    if(totalCustomers) totalCustomers.textContent = parseInt(totalCustomers.textContent || 0) + 1;
+                }
+                
+                // Highlight the card to show new detection
+                const mainCard = document.getElementById('main-customer-card');
+                if (mainCard) {
+                    mainCard.classList.add('highlight');
+                    setTimeout(() => mainCard.classList.remove('highlight'), 2000);
+                }
+            } else {
+                // Show empty state
+                mainDisplay.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="fas fa-user-clock"></i></div>
+                        <h4>No customers detected yet</h4>
+                        <p>Waiting for customers to enter the store...</p>
+                    </div>
+                `;
+                mainDisplay.setAttribute('data-customer-id', '');
+                addDebugLog('No customer to display, showing empty state', 'ui');
+            }
+        }
+        
+        function addCustomerToHistory(customer) {
+            const tableBody = document.getElementById('customer-history-tbody');
+            if (!tableBody) return;
+            
+            // Remove "no history" row if it exists
+            const noHistoryRow = document.getElementById('no-history-row');
+            if (noHistoryRow) noHistoryRow.remove();
+            
+            // Check if customer already exists and update if found
+            const existingRows = tableBody.querySelectorAll('tr');
+            for (let i = 0; i < existingRows.length; i++) {
+                const existingId = existingRows[i].querySelector('.customer-id');
+                if (existingId && existingId.innerText === customer.customer_id) {
+                    // Customer already in list, update the row
+                    existingRows[i].innerHTML = `
+                        <td><div class="customer-cell"><div class="customer-id">${customer.customer_id}</div></div></td>
+                        <td>${customer.detection_time}</td>
+                        <td><div class="amount">$${customer.predicted_bill.toFixed(2)}</div></td>
+                        <td><div class="actions">
+                            <button class="btn-icon" onclick="confirmPrediction('${customer.customer_id}', ${customer.predicted_bill})">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn-icon" onclick="window.location.href='/customer/${customer.customer_id}'">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div></td>
+                    `;
+                    existingRows[i].classList.add('new-customer');
+                    existingRows[i].setAttribute('data-customer-id', customer.customer_id);
+                    
+                    // Move to top
+                    if (i > 0) tableBody.insertBefore(existingRows[i], tableBody.firstChild);
+                    setTimeout(() => existingRows[i].classList.remove('new-customer'), 2000);
+                    
+                    addDebugLog(`Updated existing customer ${customer.customer_id} in history table`, 'ui');
+                    return;
+                }
+            }
+            
+            // Create new row for customer if not found
+            const row = document.createElement('tr');
+            row.classList.add('new-customer');
+            row.setAttribute('data-customer-id', customer.customer_id);
+            row.innerHTML = `
+                <td><div class="customer-cell"><div class="customer-id">${customer.customer_id}</div></div></td>
+                <td>${customer.detection_time}</td>
+                <td><div class="amount">$${customer.predicted_bill.toFixed(2)}</div></td>
+                <td><div class="actions">
+                    <button class="btn-icon" onclick="confirmPrediction('${customer.customer_id}', ${customer.predicted_bill})">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn-icon" onclick="window.location.href='/customer/${customer.customer_id}'">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div></td>
+            `;
+            
+            // Add to top of table and manage row count
+            if (tableBody.firstChild) tableBody.insertBefore(row, tableBody.firstChild);
+            else tableBody.appendChild(row);
+            
+            while (tableBody.children.length > 10) tableBody.removeChild(tableBody.lastChild);
+            setTimeout(() => row.classList.remove('new-customer'), 2000);
+            
+            addDebugLog(`Added new customer ${customer.customer_id} to history table`, 'ui');
+        }
+        
+        function removeCustomerFromDisplay(customerId) {
+            // Get current displayed customer ID
+            const mainDisplay = document.getElementById('main-customer-display');
+            if (!mainDisplay) return;
+            
+            const currentId = mainDisplay.getAttribute('data-customer-id');
+            
+            // If this is the displayed customer, show empty state
+            if (currentId === customerId) {
+                addDebugLog(`Removing customer ${customerId} from main display`, 'ui');
+                
+                // Create the fade-out effect
+                const currentContent = mainDisplay.innerHTML;
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = currentContent;
+                wrapper.style.opacity = '1';
+                wrapper.style.transition = 'opacity 0.5s ease';
+                
+                mainDisplay.innerHTML = '';
+                mainDisplay.appendChild(wrapper);
+                
+                // Fade out and show empty state
+                setTimeout(() => {
+                    wrapper.style.opacity = '0';
+                    setTimeout(() => {
+                        mainDisplay.innerHTML = `
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-user-clock"></i></div>
+                                <h4>No customers detected yet</h4>
+                                <p>Waiting for customers to enter the store...</p>
+                            </div>
+                        `;
+                        mainDisplay.setAttribute('data-customer-id', '');
+                    }, 500);
+                }, 100);
+            }
+            
+            removeCustomerFromHistory(customerId);
+        }
+        
+        function removeCustomerFromHistory(customerId) {
+            const tableBody = document.getElementById('customer-history-tbody');
+            if (!tableBody) return;
+            
+            addDebugLog(`Removing customer ${customerId} from history table`, 'ui');
+            
+            // Find the row with this customer ID
+            const rows = tableBody.querySelectorAll(`tr[data-customer-id="${customerId}"]`);
+            rows.forEach(row => {
+                row.classList.add('fade-out');
+                setTimeout(() => {
+                    if (row.parentNode === tableBody) tableBody.removeChild(row);
+                    
+                    // If no more customers, show empty message
+                    if (tableBody.children.length === 0) {
+                        const emptyRow = document.createElement('tr');
+                        emptyRow.id = 'no-history-row';
+                        emptyRow.innerHTML = `<td colspan="4" class="text-center">
+                            <div class="empty-table-message">No recent customers detected</div>
+                        </td>`;
+                        tableBody.appendChild(emptyRow);
+                    }
+                }, 500);
+            });
+            
+            // Update tracking
+            if (knownCustomerIds.has(customerId)) knownCustomerIds.delete(customerId);
+            
+            // Update counter
+            const totalCustomers = document.getElementById('total-customers');
+            if (totalCustomers && parseInt(totalCustomers.textContent) > 0) {
+                totalCustomers.textContent = parseInt(totalCustomers.textContent) - 1;
+            }
+        }
+        
+        function fetchLatestCustomer(isManualCheck = false) {
+            isManualCheck ? 
+                addDebugLog('Manually fetching latest customer data', 'api') : 
+                addDebugLog('Auto-fetching latest customer data', 'api');
+            
+            // Use a shorter timeout to prevent long-running requests
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+            
+            fetch('/api/latest_customer', { 
+                signal: controller.signal 
+            })
+            .then(response => {
+                clearTimeout(timeoutId);
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                // Update debug info
+                const debugApiTime = document.getElementById('debug-api-time');
+                const debugApiStatus = document.getElementById('debug-api-status');
+                
+                if (debugApiTime) debugApiTime.textContent = new Date().toLocaleTimeString();
+                if (debugApiStatus) {
+                    debugApiStatus.textContent = 'Success';
+                    debugApiStatus.className = 'text-success';
+                }
+                
+                // Reset failure counter on success
+                detectionCheckCount = 0;
+                
+                if (data.status === 'success' && data.customer) {
+                    // Check if this is a new customer or an update to current one
+                    const mainDisplay = document.getElementById('main-customer-display');
+                    if (!mainDisplay) return;
+                    
+                    const currentId = mainDisplay.getAttribute('data-customer-id');
+                    
+                    // Check if this is a new timestamp - only update for new data
+                    if (data.customer.timestamp !== lastTimestamp) {
+                        lastTimestamp = data.customer.timestamp;
+                        addDebugLog(`New customer data detected for ${data.customer.customer_id}`, 'data');
+                        
+                        // Update display with the new customer data
+                        updateCustomerDisplay(data.customer);
+                        
+                        // Show notification if this is different from currently displayed customer
+                        if (data.customer.customer_id !== currentId) {
+                            // Turn on detection indicator
+                            const detectionStatus = document.getElementById('detection-status');
+                            if (detectionStatus) {
+                                detectionStatus.classList.remove('status-inactive');
+                                detectionStatus.classList.add('status-active');
+                            }
+                            
+                            showNotification(`Customer ${data.customer.customer_id} detected!`);
+                        }
+                    } else {
+                        addDebugLog('No change in customer data', 'data');
+                    }
+                } else if (data.status === 'no_customers') {
+                    addDebugLog('No customers detected yet', 'data');
+                }
+                
+                // Turn on detection indicator if we got a valid response
+                const detectionStatus = document.getElementById('detection-status');
+                if (detectionStatus) {
+                    detectionStatus.classList.remove('status-inactive');
+                    detectionStatus.classList.add('status-active');
+                }
+            })
+            .catch(error => {
+                clearTimeout(timeoutId);
+                detectionCheckCount++;
+                
+                // Don't log abort errors as they're expected when timeout occurs
+                if (error.name !== 'AbortError') {
+                    addDebugLog(`Error fetching customer data: ${error}`, 'error');
+                } else {
+                    addDebugLog('Request timed out, will retry later', 'warning');
+                }
+                
+                // Update debug info
+                const debugApiTime = document.getElementById('debug-api-time');
+                const debugApiStatus = document.getElementById('debug-api-status');
+                
+                if (debugApiTime) debugApiTime.textContent = new Date().toLocaleTimeString();
+                if (debugApiStatus) {
+                    debugApiStatus.textContent = 'Error';
+                    debugApiStatus.className = 'text-danger';
+                }
+                
+                // Turn off detection indicator after multiple consecutive failures
+                if (detectionCheckCount > maxConsecutiveFailures) {
+                    const detectionStatus = document.getElementById('detection-status');
+                    if (detectionStatus) {
+                        detectionStatus.classList.remove('status-active');
+                        detectionStatus.classList.add('status-inactive');
+                    }
+                    addDebugLog('Detection system appears to be offline', 'warning');
+                }
+            })
+            .finally(() => {
+                // Continue the countdown if auto-refresh is enabled
+                if (autoRefreshEnabled) {
+                    resetCountdown();
+                }
+            });
+        }
+        
+        // Form submission handler for latest customer update
+        function handleLatestUpdateFormSubmit(event) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const formData = new FormData(form);
+            const customerId = formData.get('customer_id');
+            const actualBill = parseFloat(formData.get('actual_bill'));
+            
+            if (isNaN(actualBill)) {
+                alert('Please enter a valid amount');
+                return;
+            }
+            
+            addDebugLog(`Submitting manual bill update for ${customerId}: $${actualBill}`, 'action');
+            
+            fetch('/api/update_bill', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({customer_id: customerId, actual_bill: actualBill}),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showNotification(`Bill updated: $${actualBill.toFixed(2)}`);
+                    removeCustomerFromDisplay(customerId);
+                    form.reset();
+                    form.parentElement.style.display = 'none';
+                } else {
+                    alert('Error: ' + data.message);
+                    addDebugLog(`Error updating bill: ${data.message}`, 'error');
+                }
+            })
+            .catch((error) => {
+                alert('Error updating bill: ' + error);
+                addDebugLog(`Error updating bill: ${error}`, 'error');
+            });
+        }
+        
+        // Safer countdown function that checks for element existence
+        function resetCountdown() {
+            countdown = 5;
+            updateCountdownDisplay();
+            
+            // Clear any existing interval
+            if (refreshIntervalId) {
+                clearInterval(refreshIntervalId);
+            }
+            
+            // Start a new interval
+            refreshIntervalId = setInterval(function() {
+                countdown--;
+                updateCountdownDisplay();
+                
+                if (countdown <= 0) {
+                    clearInterval(refreshIntervalId);
+                    countdown = 5;
+                    fetchLatestCustomer();
+                }
+            }, 1000);
+        }
+        
+        function updateCountdownDisplay() {
+            const countdownElement = document.getElementById('countdown');
+            const refreshStatus = document.getElementById('refresh-status');
+            
+            if (countdownElement) {
+                countdownElement.textContent = countdown;
+            }
+            
+            if (refreshStatus && !countdownElement) {
+                // If countdown element is missing but refresh status exists,
+                // update the entire text
+                refreshStatus.textContent = `Checking for new customers... ${countdown}s`;
+            }
+        }
+        
+        function toggleAutoRefresh() {
+            autoRefreshEnabled = !autoRefreshEnabled;
+            const toggleButton = document.getElementById('toggleAutoRefresh');
+            const refreshStatus = document.getElementById('refresh-status');
+            
+            if (!toggleButton || !refreshStatus) return;
+            
+            if (autoRefreshEnabled) {
+                toggleButton.classList.add('active');
+                toggleButton.querySelector('span').textContent = 'Auto';
+                refreshStatus.textContent = 'Checking for new customers... ' + countdown + 's';
+                addDebugLog('Auto-refresh enabled', 'action');
+                resetCountdown();
+            } else {
+                toggleButton.classList.remove('active');
+                toggleButton.querySelector('span').textContent = 'Manual';
+                refreshStatus.textContent = 'Auto-refresh disabled';
+                addDebugLog('Auto-refresh disabled', 'action');
+                
+                // Clear any existing interval
+                if (refreshIntervalId) {
+                    clearInterval(refreshIntervalId);
+                    refreshIntervalId = null;
+                }
+            }
+        }
+        
+        // Initialize the dashboard
+        function initializeDashboard() {
+            // Debug panel toggle
+            const debugBtn = document.getElementById('debug-btn');
+            if (debugBtn) {
+                debugBtn.addEventListener('click', function() {
+                    const debugPanel = document.getElementById('debug-panel');
+                    if (!debugPanel) return;
+                    
+                    if (debugPanel.style.display === 'none') {
+                        debugPanel.style.display = 'block';
+                        addDebugLog('Debug panel opened');
+                    } else {
+                        debugPanel.style.display = 'none';
+                    }
+                });
+            }
+            
+            // Debug button actions
+            const manualCheckBtn = document.getElementById('manual-check-btn');
+            if (manualCheckBtn) {
+                manualCheckBtn.addEventListener('click', function() {
+                    addDebugLog('Manual check requested', 'action');
+                    fetchLatestCustomer(true);
+                });
+            }
+            
+            const testDetectionBtn = document.getElementById('test-detection-btn');
+            if (testDetectionBtn) {
+                testDetectionBtn.addEventListener('click', function() {
+                    addDebugLog('Testing detection...', 'action');
+                    
+                    fetch('/api/test_detection', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({customer_id: "C1001", test: true}),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        addDebugLog(`Test detection response: ${JSON.stringify(data)}`, 'success');
+                        setTimeout(() => fetchLatestCustomer(true), 500);
+                    })
+                    .catch(error => addDebugLog(`Test detection error: ${error}`, 'error'));
+                });
+            }
+            
+            // Sidebar toggle
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function() {
+                    const sidebar = document.querySelector('.sidebar');
+                    const mainContent = document.querySelector('.main-content');
+                    
+                    if (sidebar) sidebar.classList.toggle('collapsed');
+                    if (mainContent) mainContent.classList.toggle('expanded');
+                });
+            }
+            
+            // Auto-refresh toggle
+            const toggleAutoRefreshBtn = document.getElementById('toggleAutoRefresh');
+            if (toggleAutoRefreshBtn) {
+                toggleAutoRefreshBtn.addEventListener('click', toggleAutoRefresh);
+            }
+            
+            // Setup manual update form
+            const manualUpdateForm = document.getElementById('manual-update-form');
+            if (manualUpdateForm) {
+                manualUpdateForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    
+                    const formData = new FormData(manualUpdateForm);
+                    const customerId = formData.get('customer_id');
+                    const actualBill = parseFloat(formData.get('actual_bill'));
+                    
+                    if (isNaN(actualBill)) {
+                        alert('Please enter a valid amount');
+                        return;
+                    }
+                    
+                    fetch('/api/update_bill', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({customer_id: customerId, actual_bill: actualBill}),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const billDisplay = document.getElementById('actual-bill-display');
+                            if (billDisplay) billDisplay.innerHTML = `$${actualBill.toFixed(2)}`;
+                            
+                            showNotification(`Bill updated: $${actualBill.toFixed(2)}`);
+                            manualUpdateForm.reset();
+                            
+                            const manualEditForm = document.getElementById('manual-edit-form');
+                            if (manualEditForm) manualEditForm.style.display = 'none';
+                        } else {
+                            alert('Error: ' + data.message);
+                        }
+                    })
+                    .catch((error) => alert('Error updating bill: ' + error));
+                });
+            }
+            
+            // Initialize latest update form if it exists
+            const latestUpdateForm = document.getElementById('latest-update-form');
+            if (latestUpdateForm) {
+                latestUpdateForm.addEventListener('submit', handleLatestUpdateFormSubmit);
+            }
+            
+            // Initialize countdown timer
+            if (autoRefreshEnabled) {
+                const toggleBtn = document.getElementById('toggleAutoRefresh');
+                if (toggleBtn) toggleBtn.classList.add('active');
+                resetCountdown();
+            }
+            
+            // First data fetch on page load
+            fetchLatestCustomer(true);
+            addDebugLog('Dashboard initialized', 'init');
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+    </script>
+    
+        </body>
+        </html>
