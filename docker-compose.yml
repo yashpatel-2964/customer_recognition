@@ -4,7 +4,7 @@ services:
   web:
     build: .
     ports:
-      - "5001:5001"
+      - "127.0.0.1:5001:5001"
     volumes:
       - ./data:/app/data
       - ./models:/app/models
@@ -14,17 +14,48 @@ services:
       - MONGO_URI=mongodb://mongo:27017/face_recognition_db
       - SECRET_KEY=${SECRET_KEY:-DefaultSecretKeyChangeThis}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-DefaultJWTSecretKeyChangeThis}
+      - FLASK_ENV=production
+      - CORS_ALLOWED_ORIGINS=http://localhost:5001,https://localhost:5001
+      - API_ENDPOINT=https://localhost:5001/identify_customer
+      - API_CUSTOMER_DETECTION=https://localhost:5001/api/customer_detected
     depends_on:
       - mongo
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   mongo:
     image: mongo:5.0
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
     restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME:-mongouser}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD:-mongopassword}
+    command: ["--auth", "--bind_ip", "0.0.0.0"]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo mongo:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   mongo_data: 

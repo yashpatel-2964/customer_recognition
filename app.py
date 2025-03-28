@@ -155,10 +155,20 @@ def add_compression_and_caching(response):
     if request.path.startswith('/static/'):
         response.headers['Cache-Control'] = 'public, max-age=86400'  # 1 day
     
-    # Add CORS headers to allow requests from face recognition script
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    # Add CORS headers to allow requests from approved origins
+    if request.method == 'OPTIONS':
+        # Handle preflight requests
+        origin = request.headers.get('Origin', '')
+        if origin in Config.CORS_ALLOWED_ORIGINS:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            response.headers['Access-Control-Max-Age'] = '3600'  # Cache preflight response for 1 hour
+    elif request.headers.get('Origin') in Config.CORS_ALLOWED_ORIGINS:
+        # Handle actual requests
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     
     return response
 
@@ -168,6 +178,8 @@ def add_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'  # HSTS for 1 year
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com"
     return response
 
 # Register authentication blueprint
@@ -584,6 +596,7 @@ def serve_css():
 
 if __name__ == '__main__':
     from threading import Timer
+    import ssl
     
     # Setup database indexes for better performance
     setup_db_indexes()
@@ -663,6 +676,93 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"Error creating default employees: {e}")
     
-    # Run the app without SSL first to avoid certificate issues
-    print("Starting Flask application on http://127.0.0.1:5001")
-    app.run(debug=True, port=5001, host='0.0.0.0', threaded=True)
+    # Check if we're in development or production mode
+    if Config.DEBUG:
+        # Development mode - no SSL
+        print("Starting Flask application in DEVELOPMENT mode on http://127.0.0.1:5001")
+        app.run(debug=True, port=5001, host='127.0.0.1', threaded=True)
+    else:
+        # Production mode with SSL
+        print("Starting Flask application in PRODUCTION mode on https://127.0.0.1:5001")
+        
+        # Check for SSL certificates
+        cert_path = os.path.join(CERT_DIR, 'cert.pem')
+        key_path = os.path.join(CERT_DIR, 'key.pem')
+        
+        if not os.path.exists(cert_path) or not os.path.exists(key_path):
+            print("SSL certificates not found. Generating self-signed certificates...")
+            try:
+                from OpenSSL import crypto
+                
+                # Create a key pair
+                k = crypto.PKey()
+                k.generate_key(crypto.TYPE_RSA, 2048)
+                
+                # Create a self-signed cert
+                cert = crypto.X509()
+                cert.get_subject().C = "US"
+                cert.get_subject().ST = "State"
+                cert.get_subject().L = "City"
+                cert.get_subject().O = "Organization"
+                cert.get_subject().OU = "Organizational Unit"
+                cert.get_subject().CN = "localhost"
+                cert.set_serial_number(1000)
+                cert.gmtime_adj_notBefore(0)
+                cert.gmtime_adj_notAfter(10*365*24*60*60)  # 10 years
+                cert.set_issuer(cert.get_subject())
+                cert.set_pubkey(k)
+                cert.sign(k, 'sha256')
+                
+                # Write certificate and key to files
+                with open(cert_path, "wb") as f:
+                    f.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+                with open(key_path, "wb") as f:
+                    f.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
+                    
+                print("Self-signed certificates generated successfully.")
+            except Exception as e:
+                print(f"Error generating certificates: {e}")
+                print("Running without SSL instead.")
+                app.run(debug=False, port=5001, host='127.0.0.1', threaded=True)
+                import sys
+                sys.exit(1)
+        
+        # Create SSL context
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(cert_path, key_path)
+        
+        # Run with gunicorn if available (recommended for production)
+        try:
+            from gunicorn.app.base import BaseApplication
+            
+            class StandaloneApplication(BaseApplication):
+                def __init__(self, app, options=None):
+                    self.options = options or {}
+                    self.application = app
+                    super().__init__()
+                
+                def load_config(self):
+                    for key, value in self.options.items():
+                        if key in self.cfg.settings and value is not None:
+                            self.cfg.set(key.lower(), value)
+                
+                def load(self):
+                    return self.application
+            
+            options = {
+                'bind': '127.0.0.1:5001',
+                'workers': 4,
+                'certfile': cert_path,
+                'keyfile': key_path,
+                'accesslog': '-',
+                'errorlog': '-',
+                'timeout': 120,
+                'worker_class': 'gthread',
+                'threads': 4
+            }
+            
+            StandaloneApplication(app, options).run()
+        except ImportError:
+            # Fall back to Werkzeug server if gunicorn is not available
+            print("Gunicorn not available, using Werkzeug server instead.")
+            app.run(debug=False, port=5001, host='127.0.0.1', threaded=True, ssl_context=context)

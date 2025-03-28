@@ -4,38 +4,41 @@ import jwt
 import datetime
 import re
 from functools import wraps
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, redirect, url_for, session
 from config import Config
+import bcrypt
 
 def generate_password_hash(password):
-    """Simple function to hash passwords - in production use a proper library like bcrypt"""
-    import hashlib
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Hash passwords using bcrypt with salt"""
+    # Generate a random salt and hash the password
+    salt = bcrypt.gensalt(rounds=12)
+    hashed = bcrypt.hashpw(password.encode(), salt)
+    return hashed.decode('utf-8')
 
 def check_password_hash(hashed_password, password):
-    """Check if a password matches its hash"""
-    import hashlib
-    return hashed_password == hashlib.sha256(password.encode()).hexdigest()
+    """Check if a password matches its hash using bcrypt"""
+    return bcrypt.checkpw(password.encode(), hashed_password.encode())
 
-def generate_token(user_id, role='employee'):
+def generate_token(employee_id, role, expiration=3600):
     """Generate JWT token for authentication"""
     payload = {
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=Config.JWT_ACCESS_TOKEN_EXPIRES),
-        'iat': datetime.datetime.utcnow(),
-        'sub': user_id,
-        'role': role
+        'sub': employee_id,
+        'role': role,
+        'exp': datetime.datetime.utcnow() + datetime.datetime.timedelta(seconds=expiration),
+        'iat': datetime.datetime.utcnow()
     }
+    
     return jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm='HS256')
 
 def decode_token(token):
-    """Decode JWT token"""
+    """Decode JWT token and return payload"""
     try:
         payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=['HS256'])
         return payload
     except jwt.ExpiredSignatureError:
-        return {'error': 'Token expired. Please log in again.'}
+        return None, "Token expired. Please log in again."
     except jwt.InvalidTokenError:
-        return {'error': 'Invalid token. Please log in again.'}
+        return None, "Invalid token. Please log in again."
 
 def token_required(f):
     """Decorator to protect routes that require authentication"""
@@ -43,34 +46,38 @@ def token_required(f):
     def decorated(*args, **kwargs):
         token = None
         
-        # Check if token is in headers
+        # Check if token exists in various locations
         if 'Authorization' in request.headers:
-            auth_header = request.headers['Authorization']
             try:
-                token = auth_header.split(" ")[1]
+                auth_header = request.headers['Authorization']
+                token = auth_header.split(" ")[1]  # Extract the token from "Bearer <token>"
             except IndexError:
-                return jsonify({'message': 'Token is missing or invalid'}), 401
-        
-        # Check if token is in cookies
-        if not token and request.cookies.get('token'):
-            token = request.cookies.get('token')
-        
-        # Check if token is in session
-        if not token and 'token' in request.cookies:
+                return redirect(url_for('auth.login_page', error="Invalid authorization header"))
+        elif 'token' in session:
+            token = session['token']
+        elif 'token' in request.cookies:
             token = request.cookies.get('token')
             
         if not token:
-            return jsonify({'message': 'Token is missing'}), 401
-            
+            return redirect(url_for('auth.login_page'))
+        
         try:
-            data = decode_token(token)
-            if 'error' in data:
-                return jsonify({'message': data['error']}), 401
-            current_user = data['sub']
-        except:
-            return jsonify({'message': 'Token is invalid'}), 401
+            payload = decode_token(token)
+            if not payload or isinstance(payload, tuple):
+                return redirect(url_for('auth.login_page', error=payload[1] if isinstance(payload, tuple) else "Invalid token"))
+                
+            # Get employee from database
+            from db_connection import get_database
+            db = get_database()
+            current_user = db['employees'].find_one({"employee_id": payload['sub']})
             
-        return f(current_user, *args, **kwargs)
+            if not current_user:
+                return redirect(url_for('auth.login_page', error="User not found"))
+                
+            return f(current_user, *args, **kwargs)
+        except Exception as e:
+            return redirect(url_for('auth.login_page', error="Authentication error"))
+            
     return decorated
 
 def admin_required(f):
@@ -79,34 +86,42 @@ def admin_required(f):
     def decorated(*args, **kwargs):
         token = None
         
-        # Check if token is in headers
+        # Check if token exists in various locations
         if 'Authorization' in request.headers:
-            auth_header = request.headers['Authorization']
             try:
+                auth_header = request.headers['Authorization']
                 token = auth_header.split(" ")[1]
             except IndexError:
-                return jsonify({'message': 'Token is missing or invalid'}), 401
-        
-        # Check if token is in cookies
-        if not token and request.cookies.get('token'):
+                return redirect(url_for('auth.login_page', error="Invalid authorization header"))
+        elif 'token' in session:
+            token = session['token']
+        elif 'token' in request.cookies:
             token = request.cookies.get('token')
             
         if not token:
-            return jsonify({'message': 'Token is missing'}), 401
-            
+            return redirect(url_for('auth.login_page'))
+        
         try:
-            data = decode_token(token)
-            if 'error' in data:
-                return jsonify({'message': data['error']}), 401
+            payload = decode_token(token)
+            if not payload or isinstance(payload, tuple):
+                return redirect(url_for('auth.login_page', error=payload[1] if isinstance(payload, tuple) else "Invalid token"))
                 
-            if data['role'] != 'admin':
-                return jsonify({'message': 'Admin privileges required'}), 403
+            # Check if role is admin
+            if payload['role'] != 'admin':
+                return redirect(url_for('dashboard', error="Admin privileges required"))
                 
-            current_user = data['sub']
-        except:
-            return jsonify({'message': 'Token is invalid'}), 401
+            # Get employee from database
+            from db_connection import get_database
+            db = get_database()
+            current_user = db['employees'].find_one({"employee_id": payload['sub']})
             
-        return f(current_user, *args, **kwargs)
+            if not current_user:
+                return redirect(url_for('auth.login_page', error="User not found"))
+                
+            return f(current_user, *args, **kwargs)
+        except Exception as e:
+            return redirect(url_for('auth.login_page', error="Authentication error"))
+            
     return decorated
 
 def validate_password(password):
@@ -120,33 +135,26 @@ def validate_password(password):
     """
     if len(password) < 8:
         return False
-    
-    # Check for uppercase
+        
+    # Check for uppercase letter
     if not re.search(r'[A-Z]', password):
         return False
-    
-    # Check for lowercase
+        
+    # Check for lowercase letter
     if not re.search(r'[a-z]', password):
         return False
-    
+        
     # Check for digit
     if not re.search(r'\d', password):
         return False
-    
+        
     # Check for special character
     if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
         return False
-    
+        
     return True
 
 def is_valid_employee_id(employee_id):
-    """Check if the employee ID is within the valid range"""
-    # Check the format is empXXXX
-    if not employee_id.startswith('emp'):
-        return False
-    
-    try:
-        emp_num = int(employee_id[3:])
-        return Config.EMPLOYEE_ID_MIN <= emp_num <= Config.EMPLOYEE_ID_MAX
-    except ValueError:
-        return False
+    """Check if employee ID is valid format"""
+    # Simple validation - employee ID should start with 'emp' or 'admin' followed by numbers
+    return bool(re.match(r'^(emp|admin)\d{4,6}$', employee_id))

@@ -4,39 +4,76 @@ services:
   web:
     image: ${DOCKER_IMAGE:-yourusername/customer-recognition-system:latest}
     ports:
-      - "5001:5001"
+      - "127.0.0.1:5001:5001"  # Only expose on localhost
     volumes:
       - customer_data:/app/data
       - customer_models:/app/models
       - customer_images:/app/static/images
       - customer_captured:/app/auto_captured
     environment:
-      - MONGO_URI=mongodb://mongo:27017/face_recognition_db
-      - SECRET_KEY=${SECRET_KEY:-DefaultSecretKeyChangeThis}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-DefaultJWTSecretKeyChangeThis}
+      - MONGO_URI=mongodb://mongouser:${MONGO_PASSWORD}@mongo:27017/face_recognition_db?authSource=admin
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - FLASK_ENV=production
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://your-domain.com}
     depends_on:
       - mongo
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    networks:
+      - app_network
 
   mongo:
     image: mongo:5.0
     volumes:
       - mongo_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
     restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=mongouser
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+    command: ["--auth", "--bind_ip", "0.0.0.0"]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo mongo:27017/test -u mongouser -p '${MONGO_PASSWORD}' --quiet --authenticationDatabase admin
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - app_network
 
 volumes:
   customer_data:
   customer_models:
   customer_images:
   customer_captured:
-  mongo_data: 
+  mongo_data:
+
+networks:
+  app_network:
+    driver: bridge 
