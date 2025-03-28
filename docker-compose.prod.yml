@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  web:
+    image: ${DOCKER_IMAGE:-yourusername/customer-recognition-system:latest}
+    ports:
+      - "5001:5001"
+    volumes:
+      - customer_data:/app/data
+      - customer_models:/app/models
+      - customer_images:/app/static/images
+      - customer_captured:/app/auto_captured
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/face_recognition_db
+      - SECRET_KEY=${SECRET_KEY:-DefaultSecretKeyChangeThis}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-DefaultJWTSecretKeyChangeThis}
+    depends_on:
+      - mongo
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  mongo:
+    image: mongo:5.0
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  customer_data:
+  customer_models:
+  customer_images:
+  customer_captured:
+  mongo_data: 
